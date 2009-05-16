@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime
+from malnutrition import utils
 
 class Case(models.Model):
     GENDER_CHOICES = (
@@ -60,15 +61,13 @@ class Case(models.Model):
             'village': self.village,
         }
     
+    
     def years_months(self):
-        now = datetime.now().date()
-        ymonths = (now.year - self.dob.year) * 12
-        months = ymonths + (now.month - self.dob.month)
-        return (now.year - self.dob.year, months)
+        return utils.years_months(self.dob)
 
     def age(self):
         years, months = self.years_months()
-        if years > 3:
+        if years >= 3:
             return str(years)
         else:
             return "%sm" % months

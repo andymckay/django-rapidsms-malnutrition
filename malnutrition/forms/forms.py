@@ -7,7 +7,7 @@ class FieldError(Exception):
 class Field:
     creation_counter = 0
     
-    def __init__(self, required=None):
+    def __init__(self, required=True):
         assert required is not None
         self.name = None
         self.required = required
@@ -18,7 +18,7 @@ class Field:
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
     
-class Form(object):
+class Form:
     def __init__(self, text):
         self.fields = []
         self.errors = []

@@ -13,10 +13,14 @@ class Zone(models.Model):
     CLUSTER_ZONE = 1
     VILLAGE_ZONE = 2
     SUBVILLAGE_ZONE = 3
+    REGION_ZONE = 4
+    DISTRICT = 5
     ZONE_TYPES = (
         (CLUSTER_ZONE, _('Cluster')),
         (VILLAGE_ZONE, _('Village')),
-        (SUBVILLAGE_ZONE, _('Sub village'))
+        (SUBVILLAGE_ZONE, _('Sub village')),
+        (REGION_ZONE, _('Region')),
+        (DISTRICT, _('District'))
     )
     
     number = models.PositiveIntegerField(unique=True,db_index=True)

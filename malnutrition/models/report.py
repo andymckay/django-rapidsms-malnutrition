@@ -1,5 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.translation import ugettext_lazy as _
+
+from datetime import datetime
+
+from malnutrition.utils.parse import stunting, weight_for_height
 
 class Report(models.Model):
     class Meta:
@@ -13,6 +18,7 @@ class Report(models.Model):
     def save(self, *args):
         if not self.id:
             self.entered_at = datetime.now()
+            
         super(Report, self).save(*args)
     
     def __unicode__ (self):
@@ -43,3 +49,68 @@ class Report(models.Model):
                     recipients.append(user)
 
         return recipients
+
+class Observation(models.Model):
+    uid = models.CharField(max_length=15)
+    name = models.CharField(max_length=255)
+    letter = models.CharField(max_length=2, unique=True)
+
+    class Meta:
+        ordering = ("name",)
+        abstract = True
+
+    def __unicode__(self):
+        return self.name
+                
+class ReportMalnutrition(Report):
+    MODERATE_STATUS = 1
+    SEVERE_STATUS = 2
+    SEVERE_COMP_STATUS = 3
+    HEALTHY_STATUS = 4
+    STATUS_CHOICES = (
+        (MODERATE_STATUS, _('MAM')),
+        (SEVERE_STATUS, _('SAM')),
+        (SEVERE_COMP_STATUS, _('SAM+')),
+        (HEALTHY_STATUS, _("Healthy")),
+    )
+    
+    muac = models.IntegerField(_("MUAC (mm)"), null=True, blank=True)
+    height = models.FloatField(_("Height (cm)"), null=True, blank=True)
+    weight = models.FloatField(_("Weight (kg)"), null=True, blank=True)
+    stunted = models.BooleanField()
+    weight_for_height = models.CharField(max_length="10")
+    observed = models.ManyToManyField("Observation")
+    status = models.IntegerField(choices=STATUS_CHOICES, db_index=True, blank=True, null=True)
+    
+    class Meta:
+        get_latest_by = 'entered_at'
+        ordering = ("-entered_at",)
+        abstract = True
+
+    def get_dictionary(self):
+        return {
+            'muac': "%d mm" % self.muac,
+            'height': "%s cm" % self.height,
+            'weight': "%s kg" % self.weight,
+            'stunted': self.stunted,
+            'weight_for_height': self.weight_for_height,
+            'observed': ", ".join([k.name for k in self.observed.all()]),
+            'diagnosis': self.get_status_display(),
+        }
+    
+    def save(self, *args):
+        # add in stunting and weight for height
+        if not self.id:
+            # stunting
+            if self.height:
+                number = stunting(self.case.dob, self.case.gender)
+                if number:
+                    self.stunted = number < self.height
+
+            # weight for height            
+            if self.height and self.weight:
+                res = weight_for_height(self.height, self.weight)
+                if res:
+                    self.weight_for_height = res
+            
+        super(ReportMalnutrition, self).save(*args)

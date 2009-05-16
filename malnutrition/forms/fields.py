@@ -18,10 +18,17 @@ class StringField(Field):
             else:
                 raise FieldError, "The field %s did not match the required format." % (self.name)
 
-class GenderField(Field):
-    def __init__(self, required=False):
-        Field.__init__(self, required=required)
 
+class FloatField(Field):
+    def validate(self, text):
+        try:
+            data = float(text)
+        except (TypeError, ValueError):
+            raise FieldError, "The field %s was not formatted as a float, got %s" % (self.name, text)
+        self.valid = True
+        self.data = data
+        
+class GenderField(Field):
     def validate(self, text):
         if text.lower() not in ["m", "f"]:
             raise FieldError, "The field %s was not formatted correctly, got %s" % (self.name, text)
@@ -29,9 +36,6 @@ class GenderField(Field):
         self.data = text.lower()
 
 class BooleanField(Field):
-    def __init__(self, required=False):
-        Field.__init__(self, required=required)
-        
     def validate(self, text):
         if text.lower() not in ["y", "n"]:
             raise FieldError, "The field %s was not formatted correctly, got %s" % (self.name, text)
