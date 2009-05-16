@@ -1,0 +1,3 @@
+include README.rst
+recursive-include malnutrition/ui/static *
+recursive-include malnutrition/ui/templates *

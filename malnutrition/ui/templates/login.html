@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<p class="notice">You are already logged in as <b>{{ user }}</b> (this could be because you logged in via Django admin).</p>
+<h1>Login required</h1>
+<form method="POST">
+    <fieldset>
+        {{ form.as_custom }}
+        <div><input type="submit" value="login" /></div>
+    </fieldset>
+</form>
+
+{% endblock %}
