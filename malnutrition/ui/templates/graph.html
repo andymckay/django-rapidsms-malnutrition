@@ -1,0 +1,27 @@
+<div class="span-20">
+    <div id="{{ name }}-flot-graph" class="span-13" style="height: 200px; width: 500px"></div>
+    <div id="{{ name }}-flot-legend" class="span-4" style="height: 200px; width: 50px"></div>
+</div>
+<script type="text/javascript">
+$(function() {
+    var data = [
+        {% for line in data %}
+            {
+                label: "{{ line.name }}",
+                data: {{ line.data|safe }}
+            },
+        {% endfor %}
+    ];
+    
+    var options = {
+        lines: { show: true },
+        points: { show: true },
+        legend: { noColumns: 2, container: $("#{{name}}-flot-legend"), noColumns: 1 },
+        xaxis: { tickDecimals: 0, mode: "time", minTickSize: [1, "day"], },
+        yaxis: { min: 0 },
+        selection: { mode: "x" }
+    };
+    
+    $.plot($("#{{name}}-flot-graph"), data, options);
+});
+</script>
