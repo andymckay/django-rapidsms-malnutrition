@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.forms.models import model_to_dict
 
 from datetime import datetime
 from malnutrition import utils
@@ -50,7 +51,7 @@ class Case(models.Model):
 
     def get_dictionary(self):
         """ Return the data as a generic dictionary with some useful convenience methods done """
-        return {
+        dct = {
             'ref_id': self.ref_id,
             'last_name': self.last_name.upper(),
             'first_name': self.first_name,
@@ -60,7 +61,9 @@ class Case(models.Model):
             'guardian': self.guardian,
             'village': self.village,
         }
-    
+        data = model_to_dict(self)
+        data.update(dct)
+        return data
     
     def years_months(self):
         return utils.years_months(self.dob)

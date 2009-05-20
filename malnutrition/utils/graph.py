@@ -20,13 +20,18 @@ from malnutrition.ui.views.graph import render
 from datetime import datetime, timedelta
 import time
 
+class Data:
+    pass
+
 class Graphs:
-    def __init__(self, classes, zone_lookup):
+    def __init__(self, classes, zone_lookup, zones, limit):
         """ Classes must be a dictionary of the key classes, so that we can find their tables in the graphing
             SQL so that if you have renamed them etc we can still find them. """
         assert "ReportMalnutrition" in classes.keys()
         self.classes = classes
         self.zone_lookup = zone_lookup
+        self.zones = zones
+        self.limit = limit
 
     def timeformat(self, tme):
         return time.mktime(datetime.strptime("%s/01" % tme, "%Y/%m/%d").timetuple()) * 1000
@@ -109,7 +114,8 @@ class Graphs:
                 if not res.has_key(tme):
                     res[tme] = {"total":0, "1":0, "2":0, "3":0, "4":0}
                 res[tme]["total"] += int(r[0])
-                res[tme][str(r[2])] += int(r[0])
+                if r[2]:
+                    res[tme][str(r[2])] += int(r[0])
     
             cache.set("percentage_status_by_zone: %s" % limit, res, 60)
 
@@ -125,6 +131,49 @@ class Graphs:
             percentage = (count / float(res[key]["total"])) * 100
             nres.append([ key, percentage ])
     
+        return nres
+        
+    def percentage_stunting(self, limit, length, *args):
+        # so limit can be anything eg 0, None
+        if not limit:
+            limit = ""
+
+        cached = cache.get("percentage_stunting_by_zone: %s" % limit)
+        if cached:
+            # this can be cached
+            res = cached
+        else:
+            sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth, stunted  "\
+                "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+                "GROUP BY yearmonth, stunted ORDER BY yearmonth;"
+            # there are multiple levels of % in this, so this gets around that problem
+            data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
+                     "sqlmonth": "%%Y/%%m",
+                     "limit": limit,
+                     "length":  (datetime.now() - timedelta(days=length)).date() }
+
+            cursor = connection.cursor()
+            cursor.execute(sql % data)
+            rows = cursor.fetchall()
+
+            res = {}
+            for r in rows:
+                # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
+                tme = self.timeformat(r[1])
+                if not res.has_key(tme):
+                    res[tme] = {"total":0, "stunted": 0}
+                res[tme]["total"] += int(r[0])
+
+            cache.set("percentage_stunted_by_zone: %s" % limit, res, 60)
+
+        # this bit should not be cached    
+        nres = []
+        keys = res.keys()
+        keys.sort()
+        for key in keys:
+            percentage = (res[key]["stunted"] / float(res[key]["total"])) * 100
+            nres.append([ key, percentage ])
+
         return nres
 
     def percentage_observation(self, limit, length, *args):
@@ -187,9 +236,12 @@ class Graphs:
             nres.append([ key, percentage ])
 
         return nres
-
-
         
-    def render(self, name, by_zone, type, limit, args=None):
-        data = by_zone(type, limit, args)
-        return render(name, data)
+    def render(self, name, type, args=None):
+        """ Convenience method that produces output """
+        data = self.zone_lookup(type, self.limit, self.zones, args)
+        result = Data()
+        result.javascript = render(name, data)
+        result.data = data
+        result.name = name
+        return result

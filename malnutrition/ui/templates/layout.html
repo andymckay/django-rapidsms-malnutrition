@@ -30,6 +30,9 @@
              <div class="span-24 clearfix last">
                      <ul id="tabs">{% for app in apps %}{% if app.tab_link %}
                          <li><a href="{{ app.tab_link }}">{{ app.title }}</a></li>{% endif %}{% endfor %}
+                         {% for tab in site.tabs %}
+                            <li><a href="{{ tab.link }}">{{ tab.title }}</a></li>
+                         {% endfor %}
                          {% if user.is_authenticated %}<li><a href="/logout/">Logout</a></li>{% else %}<li><a href="/accounts/login/">Login</a></li>{% endif %}
                      </ul>
              </div>             
@@ -48,10 +51,10 @@
                 {% if msg %}
                 <p class="notice">{{ msg }}</p>
                 {% endif %}
-                <div class="span-15">
+                <div class="span-18 border">
                     {% block content %}{% endblock %}
                 </div>
-                <div class="span-7 last">
+                <div class="span-5 last">
                     {% block bar %}{% endblock %}
                 </div>
             </div>

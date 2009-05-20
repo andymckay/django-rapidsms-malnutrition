@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.forms.models import model_to_dict
 
 class Facility(models.Model):
     """ A generic model for a facility """
@@ -25,7 +26,10 @@ class Facility(models.Model):
     lat         = models.FloatField(null=True,blank=True)
     
     def get_dictionary(self):
-        return {
+        dct = {
             "name": self.name, 
             "codename": self.codename
         }
+        data = model_to_dict(self)
+        data.update(dct)
+        return data

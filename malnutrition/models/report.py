@@ -1,6 +1,6 @@
 from django.db import models
-from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from django.forms.models import model_to_dict
 
 from datetime import datetime
 
@@ -50,6 +50,9 @@ class Report(models.Model):
 
         return recipients
 
+    def get_dictionary(self):
+        return model_to_dict(self)
+
 class Observation(models.Model):
     uid = models.CharField(max_length=15)
     name = models.CharField(max_length=255)
@@ -58,6 +61,9 @@ class Observation(models.Model):
     class Meta:
         ordering = ("name",)
         abstract = True
+
+    def get_dictionary(self):
+        return model_to_dict(self)
 
     def __unicode__(self):
         return self.name
@@ -88,7 +94,8 @@ class ReportMalnutrition(Report):
         abstract = True
 
     def get_dictionary(self):
-        return {
+        dct = model_to_dict(self)
+        dct.update({
             'muac': "%d mm" % self.muac,
             'height': "%s cm" % self.height,
             'weight': "%s kg" % self.weight,
@@ -96,7 +103,8 @@ class ReportMalnutrition(Report):
             'weight_for_height': self.weight_for_height,
             'observed': ", ".join([k.name for k in self.observed.all()]),
             'diagnosis': self.get_status_display(),
-        }
+        })
+        return dct
     
     def save(self, *args):
         # add in stunting and weight for height
@@ -112,5 +120,19 @@ class ReportMalnutrition(Report):
                 res = weight_for_height(self.height, self.weight)
                 if res:
                     self.weight_for_height = res
+                    if res in ["75%-70%", ]:
+                        if self.status not in [self.SEVERE_STATUS, self.SEVERE_COMP_STATUS]:
+                            self.status = self.MODERATE_STATUS
+                    if res in ["60%-", "70%-60%", ]:
+                         if self.status not in [self.SEVERE_COMP_STATUS,]:
+                             self.status = self.SEVERE_STATUS
+            
+            if self.muac < 125:
+                if self.status not in [self.SEVERE_STATUS, self.SEVERE_COMP_STATUS]:
+                    self.status = self.MODERATE_STATUS
+                    
+            if self.muac < 115:
+                if self.status not in [self.SEVERE_COMP_STATUS]:
+                    self.status = self.SEVERE_STATUS
             
         super(ReportMalnutrition, self).save(*args)

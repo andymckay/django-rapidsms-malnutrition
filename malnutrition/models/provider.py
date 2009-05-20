@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
-
+from django.forms.models import model_to_dict
 from datetime import datetime
 
 import md5
@@ -57,7 +57,7 @@ class Provider(models.Model):
 
     def get_dictionary(self):
         """ Return the data as a generic dictionary with some useful convenience methods done """
-        return {
+        data = {
                 "user_first_name": self.user.first_name,
                 "user_last_name": self.user.last_name.upper(),
                 "id": self.id,
@@ -65,10 +65,13 @@ class Provider(models.Model):
                 "provider_mobile": self.mobile,
                 "provider_user": self.user,
                 "provider_name": self.user.first_name[0] + ' ' + self.user.last_name.upper(),
-                "provider_name_inverted": self.user.last_name + ' ' + self.user.first_name,
+                "provider_name_inverted": self.user.last_name.title() + ' ' + self.user.first_name.title(),
                 "clinic": self.clinic.name,
                 "username": self.user.username
             }
+        dct = model_to_dict(self)
+        dct.update(data)
+        return dct
 
     @classmethod
     def by_mobile (cls, mobile):
