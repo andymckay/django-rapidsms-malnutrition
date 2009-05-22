@@ -22,8 +22,8 @@ class Facility(models.Model):
     role        = models.IntegerField(choices=ROLE_CHOICES, default=CLINIC_ROLE)
     zone        = models.ForeignKey("Zone", db_index=True)
     codename    = models.CharField(max_length=255,unique=True,db_index=True)
-    lon         = models.FloatField(null=True,blank=True)
-    lat         = models.FloatField(null=True,blank=True)
+    lon         = models.FloatField(null=True,blank=True, verbose_name="Longitude")
+    lat         = models.FloatField(null=True,blank=True, verbose_name="Latitude")
     
     def get_dictionary(self):
         dct = {

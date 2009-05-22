@@ -24,14 +24,16 @@ class Data:
     pass
 
 class Graphs:
-    def __init__(self, classes, zone_lookup, zones, limit):
+    def __init__(self, classes, zone_lookup, zones, root, facilities, limit):
         """ Classes must be a dictionary of the key classes, so that we can find their tables in the graphing
             SQL so that if you have renamed them etc we can still find them. """
         assert "ReportMalnutrition" in classes.keys()
         self.classes = classes
         self.zone_lookup = zone_lookup
         self.zones = zones
+        self.root = root
         self.limit = limit
+        self.facilities = facilities
 
     def timeformat(self, tme):
         return time.mktime(datetime.strptime("%s/01" % tme, "%Y/%m/%d").timetuple()) * 1000
@@ -53,6 +55,7 @@ class Graphs:
         cursor = connection.cursor()
         cursor.execute(sql % data)
         rows = cursor.fetchall()
+
         # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
         res = [ [ self.timeformat(r[1]), r[0]  ] for r in rows ]
         return res
@@ -239,7 +242,7 @@ class Graphs:
         
     def render(self, name, type, args=None):
         """ Convenience method that produces output """
-        data = self.zone_lookup(type, self.limit, self.zones, args)
+        data = self.zone_lookup(type, self.limit, self.root, self.zones, self.facilities, args)
         result = Data()
         result.javascript = render(name, data)
         result.data = data

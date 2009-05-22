@@ -29,3 +29,9 @@ class Zone(models.Model):
     category = models.IntegerField(choices=ZONE_TYPES, default=VILLAGE_ZONE)
     lon = models.FloatField(null=True,blank=True)
     lat = models.FloatField(null=True,blank=True)
+
+    def parent(self):
+        return self.head
+
+    def children(self):
+        return self.__class__.objects.filter(head=self)

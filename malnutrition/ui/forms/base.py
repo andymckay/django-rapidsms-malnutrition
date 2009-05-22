@@ -25,6 +25,9 @@ class BaseModelForm(forms.ModelForm):
     def as_custom(self):
         return as_blue_print(self)
 
+forms.ModelForm.as_custom = as_blue_print
+forms.Form.as_custom = as_blue_print
+
 # this is a little worse, but it pushes an as_div into the form
 # which is then set as the default so the errors come out nicely
 from django.utils.html import conditional_escape
