@@ -2,6 +2,7 @@ from malnutrition.forms import Form
 from malnutrition.forms import StringField
 from malnutrition.sms.resolve import models
 from malnutrition.sms.command import Command, CommandError
+from malnutrition.utils.log import log
 
 class JoinForm(Form):
     facility = StringField(valid="(\d+)")
@@ -27,6 +28,7 @@ class Join(Command):
         # so it's in use, don't save anything
         info = in_use.get_dictionary()
         info.update(facility.get_dictionary())
+        info["username"] = self.data.username
         return "Phone %(mobile)s is already registered to %(user_last_name)s, %(user_first_name)s. Reply with 'CONFIRM %(username)s'." % info
     
     def error_username_used(self):
@@ -42,12 +44,13 @@ class Join(Command):
         if not self.data.username:
             tmp = self.data.username = (self.form.clean.first.data[0] + self.form.clean.last.data).lower()
             # if we are going to calculate usernames, we need to prevent clashes
-            for x in range(0, 100):
+            for x in range(1, 100):
                 try:
                     models.User.objects.get(username=tmp)
+                    tmp = "%s-%03d" % (self.data.username, x)
                 except models.User.DoesNotExist:
                     break
-                tmp = "%s-%03d" % (self.data.username, x)
+                
             self.data.username = tmp
         
         # if we have got a username, double check it's ok
@@ -57,17 +60,19 @@ class Join(Command):
         mobile = self.message.peer
         in_use = models.Provider.by_mobile(mobile)
         
+        user = models.User(username=self.data.username, first_name=self.form.clean.first.data.title(), last_name=self.form.clean.last.data.title())
+        user.save()
+        
+        # ok its not in use, save it all and respond
+        provider = models.Provider(mobile=mobile, user=user, clinic=facility, active=not bool(in_use))
+        provider.save()
+        
+        log(provider, "provider_registered")
         if not in_use:
-            user = models.User(username=self.data.username, first_name=self.form.clean.first.data.title(), last_name=self.form.clean.last.data.title())
-            user.save()
-            
-            # ok its not in use, save it all and respond
-            provider = models.Provider(mobile=mobile, user=user, clinic=facility, active=True)
-            provider.save()
-            
+            # all goood!
             self.data.provider = provider
             self.data.facility = facility
             return True
-        
         else:
+            # send them back a confirm message
             raise CommandError, self.error_in_use(in_use, facility)

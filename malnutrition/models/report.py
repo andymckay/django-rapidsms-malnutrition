@@ -5,6 +5,8 @@ from django.forms.models import model_to_dict
 from datetime import datetime
 
 from malnutrition.utils.parse import stunting, weight_for_height
+ 
+DEBUG = False
 
 class Report(models.Model):
     class Meta:
@@ -122,17 +124,21 @@ class ReportMalnutrition(Report):
                     self.weight_for_height = res
                     if res in ["75%-70%", ]:
                         if self.status not in [self.SEVERE_STATUS, self.SEVERE_COMP_STATUS]:
+                            if DEBUG: print "weight for height causing moderate status"
                             self.status = self.MODERATE_STATUS
                     if res in ["60%-", "70%-60%", ]:
                          if self.status not in [self.SEVERE_COMP_STATUS,]:
+                             if DEBUG: print "weight for height causing severe status"
                              self.status = self.SEVERE_STATUS
             
             if self.muac < 125:
                 if self.status not in [self.SEVERE_STATUS, self.SEVERE_COMP_STATUS]:
+                    if DEBUG: print "muac causing moderate status"
                     self.status = self.MODERATE_STATUS
                     
-            if self.muac < 115:
+            if self.muac < 110:
                 if self.status not in [self.SEVERE_COMP_STATUS]:
+                    if DEBUG: print "muac causing severe status"
                     self.status = self.SEVERE_STATUS
-            
+        
         super(ReportMalnutrition, self).save(*args)

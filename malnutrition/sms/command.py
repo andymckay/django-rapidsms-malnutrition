@@ -6,6 +6,9 @@ class CommandError(Exception):
 class HandlerFailed(Exception):
     pass
     
+class FormFailed(Exception):
+    pass
+    
 def _(txt): return txt
 
 class Data: pass
@@ -15,7 +18,7 @@ def authenticated(func):
         if self.message.sender:
             return func(self, *args, **kw)
         else:
-            raise CommandError, self.not_allowed()
+            raise CommandError(self.not_allowed())
             
     return wrapper
     
@@ -40,15 +43,16 @@ class Command:
             self.post_init()
         except CommandError, e:
             self.can_process = False
+            raise HandlerFailed(e)
     
     def not_allowed(self):
-        self.message.respond(_("%s is not a registered number.") % self.message.peer)
+        return "%s is not a registered number." % self.message.peer
     
     def post_init(self):
         pass
         
     def not_valid(self, form):
-        self.message.respond("There was an error processing that: %s" % ". ".join(form.errors))
+        return "There was an error processing that: %s" % ". ".join(form.errors)
         
     def success(self):
         raise NotImplementedError
@@ -71,14 +75,13 @@ class Command:
         if not self.can_process:
             return
             
-        assert self.form, "There needs to be a form to process and there is none."
+        assert self.form, "There needs to be a form to process and there is none when calling the command %s" % self
             
         # 1. test the form is good
         self.form = self.form(self.text)
         if not self.form.is_valid():
             form_not_validated.send(sender=self)
-            self.message.respond(self.not_valid(self.form))
-            return False
+            raise FormFailed(self.not_valid(self.form))
             
         form_validated.send(sender=self)
         # 2. yay its good process it
@@ -86,9 +89,11 @@ class Command:
             try:
                 method()
             except CommandError, e:
-                raise HandlerFailed(str(e))
+                raise HandlerFailed(e.message)
+            except:
+                raise
                 
         # 3. if something good happens, do that
         command_success.send(sender=self)
         msg = self.success()
-        self.message.respond(msg)
+        return msg
