@@ -24,7 +24,7 @@ class Data:
     pass
 
 class Graphs:
-    def __init__(self, classes, zone_lookup, zones, root, facilities, limit):
+    def __init__(self, classes=None, zone_lookup=None, zones=None, root=None, facilities=None, limit=None):
         """ Classes must be a dictionary of the key classes, so that we can find their tables in the graphing
             SQL so that if you have renamed them etc we can still find them. """
         assert "ReportMalnutrition" in classes.keys()
@@ -205,6 +205,7 @@ class Graphs:
                 "AND %(observed_table)s.observation_id = %(observed)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
 
+            print observed_sql % data
             cursor = connection.cursor()
             cursor.execute(observed_sql % data)
             observed_rows = cursor.fetchall()
@@ -213,6 +214,7 @@ class Graphs:
                 "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
 
+            print observed_sql % data
             cursor = connection.cursor()
             cursor.execute(overall_sql % data)
             overall_rows = cursor.fetchall()
