@@ -24,33 +24,39 @@ class Data:
     pass
 
 class Graphs:
-    def __init__(self, classes=None, zone_lookup=None, zones=None, root=None, facilities=None, limit=None):
+    def __init__(self, classes=None, sql_setup=None, zones=None, zones_unfiltered=None, root=None, facilities=None, limit=None, length=365):
         """ Classes must be a dictionary of the key classes, so that we can find their tables in the graphing
             SQL so that if you have renamed them etc we can still find them. """
         assert "ReportMalnutrition" in classes.keys()
         self.classes = classes
-        self.zone_lookup = zone_lookup
+        self.sql_setup = sql_setup
         self.zones = zones
         self.root = root
         self.limit = limit
         self.facilities = facilities
+        self.length = length
+        self.zones_unfiltered = zones_unfiltered
 
     def timeformat(self, tme):
         return time.mktime(datetime.strptime("%s/01" % tme, "%Y/%m/%d").timetuple()) * 1000
         
-    def count(self, limit, length, *args):
+    def count(self, limit, *args):
         """ Just a simple count of all the reports per month """
         if not limit:
             limit = ""
         
         sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth  "\
-            "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+            "FROM %(table)s "\
+            "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
+            "WHERE entered_at > %(length)s %(limit)s "\
             "GROUP BY yearmonth ORDER BY yearmonth;"
         # there are multiple levels of % in this, so this gets around that problem
         data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
+                 "case_table": self.classes["Case"]._meta.db_table,
                  "sqlmonth": "%%Y/%%m",
                  "limit": limit,
-                 "length":  (datetime.now() - timedelta(days=length)).date() }
+                 "length":  (datetime.now() - timedelta(days=self.length)).date() }
+
 
         cursor = connection.cursor()
         cursor.execute(sql % data)
@@ -60,7 +66,7 @@ class Graphs:
         res = [ [ self.timeformat(r[1]), r[0]  ] for r in rows ]
         return res
 
-    def average(self, limit, length, *args):
+    def average(self, limit, *args):
         """ An average of one particular element """
         if not limit:
             limit = ""
@@ -68,15 +74,18 @@ class Graphs:
         assert len(args) == 1 # has to be an column in there
 
         sql = "SELECT avg(%(column)s) as average, strftime('%(sqlmonth)s', entered_at) as yearmonth  "\
-            "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+            "FROM %(table)s "\
+            "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
+            "WHERE entered_at > %(length)s %(limit)s "\
             "GROUP BY yearmonth ORDER BY yearmonth;"
             
         # there are multiple levels of % in this, so this gets around that problem
         data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
+                 "case_table": self.classes["Case"]._meta.db_table,
                  "sqlmonth": "%%Y/%%m",
                  "limit": limit,
                  "column": args[0],
-                 "length":  (datetime.now() - timedelta(days=length)).date() }
+                 "length":  (datetime.now() - timedelta(days=self.length)).date() }
 
         cursor = connection.cursor()
         cursor.execute(sql % data)
@@ -85,31 +94,32 @@ class Graphs:
         res = [ [ self.timeformat(r[1]), r[0]  ] for r in rows ]
         return res
 
-    def percentage_status(self, limit, length, *args):
+    def percentage_status(self, limit, *statuses):
         # so limit can be anything eg 0, None
         if not limit:
             limit = ""
-        assert len(args) == 1 # has to be a status in there
-        statuses = args[0]
-    
-        cached = cache.get("percentage_status_by_zone: %s" % limit)
+        cached = cache.get("percentage_status_by_zone: %s" % self.limit)
         if cached:
             # this can be cached
             res = cached
         else:
             sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth, status  "\
-                "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+                "FROM %(table)s "\
+                "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
+                "WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth, status ORDER BY yearmonth;"
             # there are multiple levels of % in this, so this gets around that problem
             data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
+                     "case_table": self.classes["Case"]._meta.db_table,
                      "sqlmonth": "%%Y/%%m",
                      "limit": limit,
-                     "length":  (datetime.now() - timedelta(days=length)).date() }
+                     "length":  (datetime.now() - timedelta(days=self.length)).date() }
+
 
             cursor = connection.cursor()
             cursor.execute(sql % data)
             rows = cursor.fetchall()
-    
+
             res = {}
             for r in rows:
                 # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
@@ -120,7 +130,7 @@ class Graphs:
                 if r[2]:
                     res[tme][str(r[2])] += int(r[0])
     
-            cache.set("percentage_status_by_zone: %s" % limit, res, 60)
+            cache.set("percentage_status_by_zone: %s" % self.limit, res, 60)
 
         # this bit should not be cached    
         nres = []
@@ -128,6 +138,7 @@ class Graphs:
         keys.sort()
         for key in keys:
             count = 0
+
             for status in statuses:
                 count += res[key][str(status)]
 
@@ -136,7 +147,7 @@ class Graphs:
     
         return nres
         
-    def percentage_stunting(self, limit, length, *args):
+    def percentage_stunting(self, limit, *args):
         # so limit can be anything eg 0, None
         if not limit:
             limit = ""
@@ -147,14 +158,17 @@ class Graphs:
             res = cached
         else:
             sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth, stunted  "\
-                "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+                "FROM %(table)s "\
+                "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
+                "WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth, stunted ORDER BY yearmonth;"
 
             # there are multiple levels of % in this, so this gets around that problem
             data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
+                     "case_table": self.classes["Case"]._meta.db_table,
                      "sqlmonth": "%%Y/%%m",
                      "limit": limit,
-                     "length":  (datetime.now() - timedelta(days=length)).date() }
+                     "length":  (datetime.now() - timedelta(days=self.length)).date() }
 
             cursor = connection.cursor()
             cursor.execute(sql % data)
@@ -182,11 +196,10 @@ class Graphs:
 
         return nres
 
-    def percentage_observation(self, limit, length, *args):
+    def percentage_observation(self, limit, *args):
         # so limit can be anything eg 0, None
         if not limit:
             limit = ""
-        assert len(args) == 1 # has to be an observed in there
 
         cached = cache.get("percentage_observation_by_zone: %s and %s" % (limit, args))
         if cached:
@@ -196,24 +209,28 @@ class Graphs:
             data = { 
                  "table": self.classes["ReportMalnutrition"]._meta.db_table, 
                  "observed_table": "%s_observed" % self.classes["ReportMalnutrition"]._meta.db_table,
+                 "case_table": self.classes["Case"]._meta.db_table,
                  "sqlmonth": "%%Y/%%m",
                  "limit": limit,
-                 "length":  (datetime.now() - timedelta(days=length)).date(),
+                 "length":  (datetime.now() - timedelta(days=self.length)).date(),
                  "observed": args[0] }
              
             observed_sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth "\
                 "FROM %(table)s "\
                 "INNER JOIN %(observed_table)s ON (%(table)s.id = %(observed_table)s.reportmalnutrition_id) "\
+                "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
                 "WHERE entered_at > %(length)s %(limit)s "\
                 "AND %(observed_table)s.observation_id = %(observed)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
-
+            
             cursor = connection.cursor()
             cursor.execute(observed_sql % data)
             observed_rows = cursor.fetchall()
 
             overall_sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth "\
-                "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
+                "FROM %(table)s "\
+                "INNER JOIN %(case_table)s ON (%(case_table)s.id = %(table)s.case_id) "\
+                "WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
 
             cursor = connection.cursor()
@@ -243,11 +260,15 @@ class Graphs:
 
         return nres
         
-    def render(self, name, type, args=None):
+    def render(self, name, type, args=[]):
         """ Convenience method that produces output """
-        data = self.zone_lookup(type, self.limit, self.root, self.zones, self.facilities, args)
+        sql = self.sql_setup(self)
+
+        for line in sql:
+            line["data"] = type(line["limit"], *args)
+
         result = Data()
-        result.javascript = render(name, data)
-        result.data = data
+        result.javascript = render(name, sql)
+        result.data = sql
         result.name = name
         return result
