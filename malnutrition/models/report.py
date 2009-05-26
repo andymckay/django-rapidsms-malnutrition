@@ -6,7 +6,7 @@ from datetime import datetime
 
 from malnutrition.utils.parse import stunting, weight_for_height
  
-DEBUG = False
+DEBUG = True
 
 class Report(models.Model):
     class Meta:
@@ -115,7 +115,7 @@ class ReportMalnutrition(Report):
             if self.height:
                 number = stunting(self.case.dob, self.case.gender)
                 if number:
-                    self.stunted = number < self.height
+                    self.stunted = float(number) < float(self.height)
 
             # weight for height            
             if self.height and self.weight:

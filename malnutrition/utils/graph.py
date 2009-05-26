@@ -149,6 +149,7 @@ class Graphs:
             sql = "SELECT count(1) as count, strftime('%(sqlmonth)s', entered_at) as yearmonth, stunted  "\
                 "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth, stunted ORDER BY yearmonth;"
+
             # there are multiple levels of % in this, so this gets around that problem
             data = { "table": self.classes["ReportMalnutrition"]._meta.db_table, 
                      "sqlmonth": "%%Y/%%m",
@@ -166,7 +167,9 @@ class Graphs:
                 if not res.has_key(tme):
                     res[tme] = {"total":0, "stunted": 0}
                 res[tme]["total"] += int(r[0])
-
+                if r[2]:
+                    res[tme]["stunted"] += int(r[0])
+            
             cache.set("percentage_stunted_by_zone: %s" % limit, res, 60)
 
         # this bit should not be cached    
@@ -185,7 +188,7 @@ class Graphs:
             limit = ""
         assert len(args) == 1 # has to be an observed in there
 
-        cached = cache.get("percentage_observation_by_zone: %s" % limit)
+        cached = cache.get("percentage_observation_by_zone: %s and %s" % (limit, args))
         if cached:
             # this can be cached
             res = cached
@@ -205,7 +208,6 @@ class Graphs:
                 "AND %(observed_table)s.observation_id = %(observed)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
 
-            print observed_sql % data
             cursor = connection.cursor()
             cursor.execute(observed_sql % data)
             observed_rows = cursor.fetchall()
@@ -214,7 +216,6 @@ class Graphs:
                 "FROM %(table)s WHERE entered_at > %(length)s %(limit)s "\
                 "GROUP BY yearmonth ORDER BY yearmonth;"
 
-            print observed_sql % data
             cursor = connection.cursor()
             cursor.execute(overall_sql % data)
             overall_rows = cursor.fetchall()
@@ -228,9 +229,9 @@ class Graphs:
             for r in observed_rows:
                 # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
                 tme = self.timeformat(r[1])
-                res[tme][count] = int(r[0])
+                res[tme]["count"] = int(r[0])
 
-            cache.set("percentage_observation_by_zone: %s" % limit, res, 60)
+            cache.set("percentage_observation_by_zone: %s and %s" % (limit, args), res, 60)
 
         # this bit should not be cached    
         nres = []
