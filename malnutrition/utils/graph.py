@@ -115,7 +115,6 @@ class Graphs:
                      "limit": limit,
                      "length":  (datetime.now() - timedelta(days=self.length)).date() }
 
-            print sql % data
             cursor = connection.cursor()
             cursor.execute(sql % data)
             rows = cursor.fetchall()
