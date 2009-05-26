@@ -98,7 +98,7 @@ class Graphs:
         # so limit can be anything eg 0, None
         if not limit:
             limit = ""
-        cached = cache.get("percentage_status_by_zone: %s" % self.limit)
+        cached = cache.get("percentage_status_by_zone: %s, %s" % (self.limit, statuses))
         if cached:
             # this can be cached
             res = cached
@@ -115,7 +115,7 @@ class Graphs:
                      "limit": limit,
                      "length":  (datetime.now() - timedelta(days=self.length)).date() }
 
-
+            print sql % data
             cursor = connection.cursor()
             cursor.execute(sql % data)
             rows = cursor.fetchall()
@@ -130,7 +130,7 @@ class Graphs:
                 if r[2]:
                     res[tme][str(r[2])] += int(r[0])
     
-            cache.set("percentage_status_by_zone: %s" % self.limit, res, 60)
+            cache.set("percentage_status_by_zone: %s, %s" % (self.limit, statuses), res, 60)
 
         # this bit should not be cached    
         nres = []
