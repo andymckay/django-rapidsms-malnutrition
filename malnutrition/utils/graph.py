@@ -64,7 +64,7 @@ class Graphs:
 
         # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
         res = [ [ self.timeformat(r[1]), r[0]  ] for r in rows ]
-        return res
+        return res, {"percentage": False}
 
     def average(self, limit, *args):
         """ An average of one particular element """
@@ -92,13 +92,14 @@ class Graphs:
         rows = cursor.fetchall()
         # convert into a datetime, then into time (sec) then * 1000 (flot uses miliseconds)
         res = [ [ self.timeformat(r[1]), r[0]  ] for r in rows ]
-        return res
+        return res, {"percentage": False}
 
     def percentage_status(self, limit, *statuses):
         # so limit can be anything eg 0, None
         if not limit:
             limit = ""
-        cached = cache.get("percentage_status_by_zone: %s, %s" % (self.limit, statuses))
+
+        cached = cache.get("percentage_status_by_zone: %s, %s" % (limit, statuses))
         if cached:
             # this can be cached
             res = cached
@@ -129,7 +130,7 @@ class Graphs:
                 if r[2]:
                     res[tme][str(r[2])] += int(r[0])
     
-            cache.set("percentage_status_by_zone: %s, %s" % (self.limit, statuses), res, 60)
+            cache.set("percentage_status_by_zone: %s, %s" % (limit, statuses), res, 60)
 
         # this bit should not be cached    
         nres = []
@@ -144,7 +145,7 @@ class Graphs:
             percentage = (count / float(res[key]["total"])) * 100
             nres.append([ key, percentage ])
     
-        return nres
+        return nres, {"percentage": True}
         
     def percentage_stunting(self, limit, *args):
         # so limit can be anything eg 0, None
@@ -193,7 +194,7 @@ class Graphs:
             percentage = (res[key]["stunted"] / float(res[key]["total"])) * 100
             nres.append([ key, percentage ])
 
-        return nres
+        return nres, {"percentage": True}
 
     def percentage_observation(self, limit, *args):
         # so limit can be anything eg 0, None
@@ -257,17 +258,18 @@ class Graphs:
             percentage = (res[key]["count"] / float(res[key]["total"])) * 100
             nres.append([ key, percentage ])
 
-        return nres
-        
+        return nres, {"percentage": True}
+         
     def render(self, name, type, args=[]):
         """ Convenience method that produces output """
         sql = self.sql_setup(self)
 
         for line in sql:
-            line["data"] = type(line["limit"], *args)
+            line["data"], line["options"] = type(line["limit"], *args)
 
+        # ugh and wtf spring to mind
         result = Data()
-        result.javascript = render(name, sql)
+        result.javascript = render(name, sql, line["options"])
         result.data = sql
         result.name = name
         return result

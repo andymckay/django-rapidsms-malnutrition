@@ -3,10 +3,6 @@
 {% block content %}
 
 {% if user.is_authenticated %}
-    <p class="notice">You are already logged in as <b>{{ user }}</b> (this could be because you logged in via Django admin).</p>
-{% endif %}
-
-{% if user.is_authenticated %}
     <p><a href="/logout/">Logout</a> of RapidSMS.</p>
 {% else %}
     <h1>Login required</h1>

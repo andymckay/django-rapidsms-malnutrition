@@ -138,3 +138,16 @@ h2 {
     font-size: 1.5em;
     border-bottom: 1px solid black;
 }
+
+ul.column {
+    padding: 0;
+    list-style: none;
+}
+ul.column li {
+    float: left;
+    display: inline;
+}
+
+tr:hover td {
+    background: lightyellow !important;
+}
