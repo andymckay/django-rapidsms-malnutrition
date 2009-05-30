@@ -30,14 +30,21 @@ class Confirm(Command):
         except User.DoesNotExist:
             raise CommandError, self.error_not_registered()
             self.respond_not_registered(username)
-            
+        
         # deactivate all the old ones and activate the new ones
         for provider in models.Provider.objects.filter(mobile=self.message.peer):
             if provider.user.id == user.id:
                 provider.active = True
                 self.data.provider = provider
                 self.data.facility = self.data.provider.clinic
-            else:
+                provider.save()
+        
+        if not self.data.provider:
+            raise HandlerError, "Something went wrong with that confirmation: %s" % self.text
+        
+        # check the above works before disabling a bunch of people
+        for provider in models.Provider.objects.filter(mobile=self.message.peer):
+            if provider.user.id != user.id:
                 provider.active = False
             provider.save()
             log(provider, "confirmed_join")
