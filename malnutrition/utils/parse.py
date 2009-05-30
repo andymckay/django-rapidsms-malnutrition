@@ -1,7 +1,6 @@
 from datetime import datetime
 from data import stunting_boys, stunting_girls
 from data import weight_for_height as weight_for_height_data
-from data import weight_for_length as weight_for_length_data
 
 def years_months(date):
     now = datetime.now().date()
@@ -49,25 +48,11 @@ def _get_text(value, targets):
             result = text
     return result
     
-def weight_for_length(length, weight):
-    weight = float(weight)
-    number = _dumb_round(length)
-    
-    if number < 49.0:
-        # raise ValueError, "Weight for length charts only go as low as 49.0, got length %s." % length
-        return None
-    elif number > 85.5:
-        # raise ValueError, "Weight for length charts only go as high as 84.5, got length %s." % length
-        return None
-        
-    targets = weight_for_length_data.data[str(number)][:]
-    return _get_text(weight, targets)
-    
 def weight_for_height(height, weight):
     weight = float(weight)
     number = _dumb_round(height)
     
-    if number < 85.0:
+    if number < 49.0:
         # raise ValueError, "Weight for height charts only go as low as 85.0, got height %s." % height
         return None
     elif number > 130.0:

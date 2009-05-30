@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
-from parse import years_months, stunting, weight_for_length, weight_for_height
+from parse import years_months, stunting, weight_for_height
 
 def date_boundaries():
     now = datetime.now()
@@ -28,11 +28,6 @@ class test(unittest.TestCase):
         assert stunting(dates["over 1 year"], "m") == "69.83"
         assert stunting(dates["over 3 years"], "m") == "88.13"
         assert stunting(dates["over 3.5 years"], "m") == "91.59"
-    
-    def test_weight_for_length(self):
-        assert weight_for_length(84.2, 11.5) == "100%-85%"
-        assert weight_for_length(56.4, 3.5) == "75%-70%" # rounding down
-        assert weight_for_length(56.5, 3.8) == "80%-75%" # leaving same
         
     def test_weight_for_height(self):
         assert weight_for_height(85.3, 12.50) == "100%-85%"
