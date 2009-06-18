@@ -1,5 +1,5 @@
 from malnutrition.sms.signals import form_not_validated, form_validated, command_success, command_error
-
+        
 class CommandError(Exception):
     pass
 
