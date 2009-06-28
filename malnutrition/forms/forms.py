@@ -59,31 +59,32 @@ class Form:
     def __call__(self, text):
         text = text.strip().split(self.sep)
         
-        for bit, field in map(None, text, self.fields):
-            clean = getattr(self.clean, field.name)
-            clean.data = None
-            clean.error = None
-            clean.raw = None
+        if self.fields:
+            for bit, field in map(None, text, self.fields):
+                clean = getattr(self.clean, field.name)
+                clean.data = None
+                clean.error = None
+                clean.raw = None
             
-            if field is None:
-                self.errors.append("The text was longer than the form.")
-                continue 
-            if not bit:
-                if field.required:
-                    msg = "The field %s is required" % field.name
-                    clean.error = msg
-                    self.errors.append(msg)
-                continue
+                if field is None:
+                    self.errors.append("The text was longer than the form.")
+                    continue 
+                if not bit:
+                    if field.required:
+                        msg = "The field %s is required" % field.name
+                        clean.error = msg
+                        self.errors.append(msg)
+                    continue
                 
-            try:
-                clean.raw = bit
-                if hasattr(field, "parser"):
-                    bit = field.parser(bit)
-                data = field.validate(bit)
-                clean.data = data
-            except FieldError, e: 
-                clean.error = str(e)
-                self.errors.append(str(e))
+                try:
+                    clean.raw = bit
+                    if hasattr(field, "parser"):
+                        bit = field.parser(bit)
+                    data = field.validate(bit)
+                    clean.data = data
+                except FieldError, e: 
+                    clean.error = str(e)
+                    self.errors.append(str(e))
     
     def is_valid(self):
         return not bool(self.errors)

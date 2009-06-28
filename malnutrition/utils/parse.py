@@ -13,8 +13,6 @@ def stunting(date, gender):
     years, months = years_months(date)
     # we have a month eg: 9, so we assume that is 8.5, since
     # it can't be 9.5... assuming the .5's are there to make sure that
-    print
-    print int(months), gender.lower()
     if int(months) > 73:
         raise ValueError, "Stunting charts only go as high as 72.5 months"
     elif int(months) >= 1:
@@ -27,8 +25,6 @@ def stunting(date, gender):
         stunts = stunting_boys.data
     else:
         stunts = stunting_girls.data
-    print stunts[months]
-    print 
     return stunts[months]
 
 def _dumb_round(number):
