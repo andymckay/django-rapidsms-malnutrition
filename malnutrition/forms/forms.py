@@ -14,6 +14,7 @@ class Field:
         self.data = None
         self.valid = False
         self.error = None
+        self.delimiter = re.compile(".*?( |$)")
         
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
@@ -34,7 +35,6 @@ class Form:
     def __init__(self, text):
         self.fields = []
         self.errors = []
-        self.sep = " "
         
         for item in dir(self):
             obj = getattr(self, item)
@@ -57,10 +57,20 @@ class Form:
         self.__call__(text)
     
     def __call__(self, text):
-        text = text.strip().split(self.sep)
+        pops, data = [], text
+        for field in self.fields:
+            match = re.match(field.delimiter, data)
+            if match:
+                pops.append(match.group().strip())
+                data = data[match.end():]
+            else:
+                # if it fails to match, what do we do?
+                # we could append nothing, but what if you
+                # want everything to the end of the line?
+                pass
         
         if self.fields:
-            for bit, field in map(None, text, self.fields):
+            for bit, field in map(None, pops, self.fields):
                 clean = getattr(self.clean, field.name)
                 clean.data = None
                 clean.error = None

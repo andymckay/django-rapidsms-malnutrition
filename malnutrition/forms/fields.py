@@ -16,6 +16,10 @@ class StringField(Field):
             raise FieldError, "The field %s did not match the required format." % (self.name)
 
 class CatchallField(Field):
+    def __init__(self, *args, **kw):
+        Field.__init__(self, *args, **kw)
+        self.delimiter = re.compile(".*$")
+        
     def validate(self, text):
         return text
 
